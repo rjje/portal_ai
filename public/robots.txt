@@ -1,0 +1,27 @@
+# PORTAL AI Platform Robots.txt
+User-agent: *
+Allow: /
+Allow: /docs
+Allow: /playground
+Allow: /examples
+Allow: /blog
+Allow: /blog/*
+Disallow: /admin
+Disallow: /api/admin
+Disallow: /private
+
+# Specific crawler directives
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+# Sitemaps
+Sitemap: https://portal.ai/sitemap.xml
