@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 
 interface Message {
   id: string
@@ -13,53 +15,29 @@ interface Message {
 }
 
 export default function AIPlayground() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content:
-        "Hello! I'm PORTAL AI. I can help you build AI-powered applications with advanced intelligence and type-safe tools. What would you like to do?",
-      timestamp: new Date(),
-    },
-  ])
+  const { messages, sendMessage, status } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    initialMessages: [
+      {
+        id: "welcome",
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            text: "Hello! I'm PORTAL AI. I can help you build AI-powered applications with advanced intelligence and type-safe tools. What would you like to do?",
+          },
+        ],
+      },
+    ],
+  })
+
   const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
 
   const handleSendMessage = async () => {
     if (!input.trim()) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
+    sendMessage({ text: input })
     setInput("")
-    setIsLoading(true)
-
-    setTimeout(() => {
-      const responses = [
-        "That's a great question! PORTAL AI provides type-safe tool calling and streaming support.",
-        "You can use PORTAL Form to handle complex form validation with full TypeScript support.",
-        "PORTAL Query makes server state management seamless with automatic caching and synchronization.",
-        "With PORTAL Router, you get fully type-safe routing with search params and loaders.",
-        "PORTAL Store provides a reactive data store that works across your entire application.",
-      ]
-
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: randomResponse,
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 800)
   }
 
   return (
@@ -86,18 +64,29 @@ export default function AIPlayground() {
                       msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                     }`}
                   >
-                    <p className="text-sm">{msg.content}</p>
-                    <span className="text-xs opacity-70 mt-1 block">{msg.timestamp.toLocaleTimeString()}</span>
+                    {msg.parts.map((part, idx) => {
+                      if (part.type === "text") {
+                        return (
+                          <p key={idx} className="text-sm">
+                            {part.text}
+                          </p>
+                        )
+                      }
+                      return null
+                    })}
+                    <span className="text-xs opacity-70 mt-1 block">
+                      {new Date(msg.createdAt || Date.now()).toLocaleTimeString()}
+                    </span>
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {status === "in_progress" && (
                 <div className="flex gap-3 justify-start">
                   <div className="bg-muted text-foreground px-4 py-2 rounded-lg">
                     <div className="flex gap-1">
                       <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-100"></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-200"></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.4s]"></div>
                     </div>
                   </div>
                 </div>
@@ -116,12 +105,12 @@ export default function AIPlayground() {
                       handleSendMessage()
                     }
                   }}
-                  disabled={isLoading}
+                  disabled={status === "in_progress"}
                   className="flex-1"
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!input.trim() || isLoading}
+                  disabled={!input.trim() || status === "in_progress"}
                   className="bg-accent hover:bg-accent/90"
                 >
                   Send
@@ -134,16 +123,16 @@ export default function AIPlayground() {
 
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { name: "Query Data", icon: "📊" },
-            { name: "Validate Form", icon: "✓" },
-            { name: "Route Navigation", icon: "🧭" },
-            { name: "Store State", icon: "💾" },
+            { name: "Query Data", icon: "📊", prompt: "Help me with query data management" },
+            { name: "Validate Form", icon: "✓", prompt: "Show me form validation examples" },
+            { name: "Route Navigation", icon: "🧭", prompt: "Explain route navigation patterns" },
+            { name: "Store State", icon: "💾", prompt: "How does state management work?" },
           ].map((tool) => (
             <Button
               key={tool.name}
               variant="outline"
               className="h-20 flex-col gap-2 hover:border-accent bg-transparent"
-              onClick={() => setInput(`Help me with ${tool.name.toLowerCase()}`)}
+              onClick={() => setInput(tool.prompt)}
             >
               <span className="text-2xl">{tool.icon}</span>
               <span className="text-sm font-medium">{tool.name}</span>
